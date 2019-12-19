@@ -8,6 +8,15 @@ ThisBuild / organizationName := "Lambdacademy"
 lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
-    libraryDependencies += scalaTest % Test
+    libraryDependencies ++= Seq(
+      catsEffect,
+      scalaTest % Test,
+      nuProcess,
+      fs2
+    )
   )
 
+lazy val scalaUtils = (project in file("utils"))
+  .settings(
+    name := "scala-utils"
+  )
