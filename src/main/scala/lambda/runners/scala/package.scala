@@ -3,7 +3,6 @@ package lambda.runners
 import java.io.File
 
 import cats.effect._
-import fs2._
 
 package object scala {
 
