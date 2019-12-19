@@ -1,0 +1,13 @@
+[project]
+scalaVersion = "2.13.1"
+
+[module.runner.jvm]
+root = "."
+sources = ["src", "scala-utils"]
+scalaDeps = [
+  ["com.lihaoyi", "pprint", "0.5.6"]
+]
+
+[resolution]
+ivyPath = "/app/cache/ivy"
+cachePath = "/app/cache/coursier"
