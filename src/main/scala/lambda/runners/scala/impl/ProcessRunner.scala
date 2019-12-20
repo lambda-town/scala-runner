@@ -8,6 +8,7 @@ import com.zaxxer.nuprocess.{NuAbstractProcessHandler, NuProcessBuilder}
 import fs2.concurrent.Queue
 import lambda.runners.scala.RunResult
 import Executor._
+import fs2.Pipe
 
 object ProcessRunner {
 
@@ -27,14 +28,18 @@ object ProcessRunner {
             }
 
             override def onStdout(buffer: ByteBuffer, closed: Boolean): Unit = {
+              val bytes = new Array[Byte](buffer.remaining)
+              buffer.get(bytes)
               stdOutQueue
-                .offer1(Some(new String(buffer.array(), StandardCharsets.UTF_8)))
+                .offer1(Some(new String(bytes, StandardCharsets.UTF_8)))
                 .unsafeRunAsyncAndForget()
             }
 
             override def onStderr(buffer: ByteBuffer, closed: Boolean): Unit = {
+              val bytes = new Array[Byte](buffer.remaining)
+              buffer.get(bytes)
               stdErrQueue
-                .offer1(Some(new String(buffer.array(), StandardCharsets.UTF_8)))
+                .offer1(Some(new String(bytes, StandardCharsets.UTF_8)))
                 .unsafeRunAsyncAndForget()
             }
 
@@ -47,12 +52,14 @@ object ProcessRunner {
         }
         .start
       result = RunResult[IO](
-        stdOutQueue.dequeue.unNoneTerminate,
-        stdErrQueue.dequeue.unNoneTerminate,
+        stdOutQueue.dequeue.unNoneTerminate.through(formatLines),
+        stdErrQueue.dequeue.unNoneTerminate.through(formatLines),
         exitCodeIO
       )
     } yield result
 
   }
+
+  private val formatLines: Pipe[IO, String, String] = stream => stream.map(_.trim).filter(_.nonEmpty)
 
 }

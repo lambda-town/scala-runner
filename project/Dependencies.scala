@@ -7,7 +7,6 @@ object Dependencies {
   val fs2 = "co.fs2" %% "fs2-core" % "2.1.0"
   val pprint = "com.lihaoyi" %% "pprint" % "0.5.6"
   val commonsIO = "commons-io" % "commons-io" % "2.5"
-  val scalaCompiler = "org.scala-lang" % "scala-compiler" % "2.12.10"
 
   object Coursier {
     lazy val core = "io.get-coursier" %% "coursier" % "2.0.0-RC2-6"
@@ -20,4 +19,12 @@ object Dependencies {
     lazy val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
     lazy val all = Seq(logback, scalaLogging)
   }
+
+  object Scala {
+    lazy val version = "2.12.9"
+    lazy val scalac = "org.scala-lang" % "scala-compiler" % version
+    lazy val library = "org.scala-lang" % "scala-library" % version
+    lazy val all = Seq(scalac, library)
+  }
+
 }

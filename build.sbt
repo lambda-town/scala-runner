@@ -1,10 +1,11 @@
 import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
-ThisBuild / scalaVersion := "2.12.10"
+ThisBuild / scalaVersion := "2.12.9"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
+ThisBuild / fork := true
 
 ThisBuild / githubOwner := "lambdacademy-dev"
 ThisBuild / githubTokenSource := Some(Environment("GITHUB_TOKEN"))
@@ -20,8 +21,7 @@ lazy val root = (project in file("."))
       nuProcess,
       fs2,
       commonsIO,
-      scalaCompiler,
-    ) ++ Coursier.all ++ Log.all,
+    ) ++ Coursier.all ++ Log.all ++ Scala.all,
     dockerfile in docker := {
       new Dockerfile {
         from("hseeberger/scala-sbt:8u222_1.3.5_2.12.10")

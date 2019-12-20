@@ -19,9 +19,9 @@ class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
         runResult(runCode(code))
           .map({
             case (exitCode, errors, stdOut) =>
-              exitCode shouldBe 0
               errors shouldBe Nil
-              stdOut shouldBe Nil
+              stdOut shouldBe List("Test")
+              exitCode shouldBe 0
           })
           .unsafeToFuture()
       }
@@ -35,14 +35,16 @@ class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
         runResult(runFiles(List(file)))
           .map({
             case (exitCode, errors, stdOut) =>
-              exitCode shouldBe 0
               errors shouldBe Nil
-              stdOut shouldBe Nil
+              stdOut shouldBe List("Hello", "World!")
+              exitCode shouldBe 0
           })
           .unsafeToFuture()
       }
     }
   }
+
+  implicit lazy val config: ScalaRunnerConfig = ScalaRunnerConfig.default()
 
   private def runResult(rIO: IO[RunResult[IO]]): IO[(Int, List[String], List[String])] =
     for {

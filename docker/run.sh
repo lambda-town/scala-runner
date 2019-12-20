@@ -3,5 +3,5 @@
 scala \
   -J-Xmx100m \
   -Djava.security.policy==./jvm-security.policy \
-  -classpath "./classpath/*.jar:./dependencies/*.jar" \
+  -classpath "/app/classpath:/app/dependencies/*.jar" \
   Main
