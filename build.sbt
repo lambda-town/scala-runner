@@ -1,7 +1,7 @@
 import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
-ThisBuild / scalaVersion := "2.13.1"
+ThisBuild / scalaVersion := "2.12.10"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
@@ -20,22 +20,35 @@ lazy val root = (project in file("."))
       nuProcess,
       fs2,
       commonsIO,
+      scalaCompiler,
+    ) ++ Coursier.all ++ Log.all,
+    dockerfile in docker := {
+      new Dockerfile {
+        from("hseeberger/scala-sbt:8u222_1.3.5_2.12.10")
+        workDir("/app")
+        copy(file("docker"), ".")
+        copy(file("utils/src/main/scala"), "./scala-utils")
+        add((assembly in scalaUtils).value, "./dependencies/utils.jar")
+        run("chmod", "+x", "./run.sh")
+        entryPoint("./run.sh")
+      }
+    },
+    imageNames in docker := Seq(
+      ImageName(s"${organization.value}/${name.value}:latest")
     ),
-    dockerfile in docker := dockerFile
-  ).enablePlugins(DockerPlugin)
+    buildInfoKeys := Seq[BuildInfoKey](version, imageNames in docker),
+    buildInfoPackage := "lambda.runners.scala"
+  )
+  .dependsOn(scalaUtils)
+  .enablePlugins(DockerPlugin, BuildInfoPlugin)
 
 lazy val scalaUtils = (project in file("utils"))
   .settings(
     name := "scala-utils",
-    libraryDependencies += pprint
+    libraryDependencies ++= Seq(
+      pprint,
+      scalaTest % Test,
+    ),
+    assemblyJarName in assembly := "utils.jar"
   )
 
-lazy val dockerFile = new Dockerfile {
-  from("tindzk/seed:0.1.5")
-  workDir("/app")
-  copy(file("docker"), ".")
-  copy(file("utils/src/main/scala"), "./scala-utils")
-  run("chmod", "+x", "./run.sh")
-  run("chmod", "+x", "./startBloop.sh")
-  entryPoint("./run.sh")
-}

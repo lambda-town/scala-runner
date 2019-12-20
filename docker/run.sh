@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
-nohup ./startBloop.sh &
-seed bloop > /dev/null
-bloop run runner
+scala \
+  -J-Xmx100m \
+  -Djava.security.policy==./jvm-security.policy \
+  -classpath "./classpath/*.jar:./dependencies/*.jar" \
+  Main

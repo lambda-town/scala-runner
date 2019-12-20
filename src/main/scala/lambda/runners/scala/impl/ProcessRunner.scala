@@ -7,14 +7,11 @@ import cats.effect._
 import com.zaxxer.nuprocess.{NuAbstractProcessHandler, NuProcessBuilder}
 import fs2.concurrent.Queue
 import lambda.runners.scala.RunResult
+import Executor._
 
 object ProcessRunner {
 
-  def runProcess(commands: List[String])(
-      implicit
-      concurrent: Concurrent[IO],
-      cs: ContextShift[IO]
-  ): IO[RunResult[IO]] = {
+  def runProcess(commands: List[String], destroy: IO[Unit]): IO[RunResult[IO]] = {
 
     for {
       stdOutQueue <- Queue.unbounded[IO, Option[String]]
@@ -46,7 +43,7 @@ object ProcessRunner {
           pb.setProcessListener(processHandler)
           val process = pb.start()
 
-          IO(process.destroy(true))
+          destroy.flatMap(_ => IO(process.destroy(true)))
         }
         .start
       result = RunResult[IO](

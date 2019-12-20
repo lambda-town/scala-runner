@@ -3,7 +3,6 @@ package lambda.runners
 import java.io.File
 
 import cats.effect._
-import lambda.runners.scala.impl.Utils
 
 package object scala {
 
@@ -16,7 +15,7 @@ package object scala {
   def runFiles(
       sourceFiles: List[File],
       dependencies: List[Dependency] = Nil,
-  ): IO[RunResult[IO]] = ???
+  ): IO[RunResult[IO]] = impl.Compiler.runCodeFiles(sourceFiles, dependencies)
 
   /**
     * Evaluates a scala string, as if it was written in the main of an application
@@ -26,11 +25,7 @@ package object scala {
     */
   def runCode(
       code: String,
+      baseFiles: List[File] = Nil,
       dependencies: List[Dependency] = Nil,
-  ): IO[RunResult[IO]] =
-    Utils
-      .writeTmpFile(s"object Main extends App {$code}")
-      .use(file => {
-        runFiles(List(file), dependencies)
-      })
+  ): IO[RunResult[IO]] = impl.Compiler.runCodeString(code, baseFiles, dependencies)
 }
