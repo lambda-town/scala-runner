@@ -11,6 +11,8 @@ ThisBuild / githubOwner := "lambdacademy-dev"
 ThisBuild / githubTokenSource := Some(Environment("GITHUB_TOKEN"))
 ThisBuild / githubUser := sys.env.getOrElse("GITHUB_USER", "REPLACE_ME")
 
+ThisBuild / resolvers ++= Seq("program-executor").map(Resolver.githubPackagesRepo("lambdacademy-dev", _))
+
 lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
@@ -21,6 +23,7 @@ lazy val root = (project in file("."))
       nuProcess,
       fs2,
       commonsIO,
+      programExecutor,
     ) ++ Coursier.all ++ Log.all ++ Scala.all,
     dockerfile in docker := {
       new Dockerfile {

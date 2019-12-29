@@ -3,6 +3,7 @@ package lambda.runners
 import java.io.File
 
 import cats.effect._
+import lambda.programexecutor.ProgramEvent
 
 package object scala {
 
@@ -15,7 +16,7 @@ package object scala {
   def runFiles(
       sourceFiles: List[File],
       dependencies: List[Dependency] = Nil,
-  )(implicit config: ScalaRunnerConfig): IO[RunResult[IO]] = impl.Compiler.runCodeFiles(sourceFiles, dependencies)
+  )(implicit config: ScalaRunnerConfig): fs2.Stream[IO, ProgramEvent] = impl.Compiler.runCodeFiles(sourceFiles, dependencies)
 
   /**
     * Evaluates a scala string, as if it was written in the main of an application
@@ -27,5 +28,5 @@ package object scala {
       code: String,
       baseFiles: List[File] = Nil,
       dependencies: List[Dependency] = Nil,
-  )(implicit config: ScalaRunnerConfig): IO[RunResult[IO]] = impl.Compiler.runCodeString(code, baseFiles, dependencies)
+  )(implicit config: ScalaRunnerConfig): fs2.Stream[IO, ProgramEvent] = impl.Compiler.runCodeString(code, baseFiles, dependencies)
 }

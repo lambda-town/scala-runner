@@ -3,7 +3,11 @@ package lambda.runners.scala
 import java.io.File
 import java.nio.file.Paths
 
+import fs2._
 import cats.effect.IO
+import lambda.programexecutor.ProgramEvent
+import lambda.programexecutor.ProgramEvent._
+import lambda.runners.scala.impl.Utils
 import org.scalatest.{AsyncFunSpec, Matchers}
 
 class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
@@ -15,13 +19,38 @@ class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
       it("should compile and run the string") {
 
         val code = "object Main extends App { println(\"Test\") }"
-
-        runResult(runCode(code))
+        result(runCode(code))
           .map({
-            case (exitCode, errors, stdOut) =>
+            case (exitCode, stdOut, errors) =>
               errors shouldBe Nil
               stdOut shouldBe List("Test")
               exitCode shouldBe 0
+          })
+          .unsafeToFuture()
+      }
+
+      it("Should fail at runtime") {
+
+        val msg = s"ERROR : ${Utils.randomId()}"
+        val code = s"""object Main extends App { throw new Error("$msg")}"""
+        result(runCode(code))
+          .map({
+            case (exitCode, stdOut, errors) =>
+              errors.mkString should include(msg)
+              stdOut shouldBe Nil
+              exitCode shouldBe 1
+          })
+          .unsafeToFuture()
+      }
+
+      it("Should fail at compile time") {
+        val code = "object Main extends foo"
+        result(runCode(code))
+          .map({
+            case (exitCode, stdOut, errors) =>
+              errors.mkString should include("not found: type foo")
+              stdOut shouldBe Nil
+              exitCode shouldBe 1
           })
           .unsafeToFuture()
       }
@@ -32,32 +61,83 @@ class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
       it("Should compile and run the file") {
         val file = testFile("compiles.sc")
 
-        runResult(runFiles(List(file)))
+        result(runFiles(List(file)))
           .map({
-            case (exitCode, errors, stdOut) =>
+            case (exitCode, stdOut, errors) =>
               errors shouldBe Nil
-              stdOut shouldBe List("Hello", "World!")
+              stdOut shouldBe List("Hello World!")
               exitCode shouldBe 0
           })
           .unsafeToFuture()
       }
+
+      it("Should fail at compile time") {
+        val file = testFile("does-not-compile.sc")
+
+        result(runFiles(List(file)))
+          .map({
+            case (exitCode, stdOut, errors) =>
+              errors.mkString should include("not found: type baz")
+              stdOut shouldBe Nil
+              exitCode shouldBe 1
+          })
+          .unsafeToFuture()
+      }
+
+      it("Should fail at runtime") {
+
+        val file = testFile("fails.sc")
+        result(runFiles(List(file)))
+          .map({
+            case (exitCode, stdOut, errors) =>
+              errors.mkString should include("Snap!")
+              stdOut shouldBe List("Test")
+              exitCode shouldBe 1
+          })
+          .unsafeToFuture()
+      }
+
+      it("Should download external dependencies") {
+
+        val file = testFile("cats.sc")
+        result(
+          runFiles(
+            List(file),
+            List(
+              Dependency("org.typelevel", "cats-core", "2.0.0")
+            )
+          ))
+          .map({
+            case (exitCode, stdOut, errors) =>
+              errors shouldBe Nil
+              stdOut shouldBe List("Meow")
+              exitCode shouldBe 0
+          })
+          .unsafeToFuture()
+
+      }
+
     }
   }
 
   implicit lazy val config: ScalaRunnerConfig = ScalaRunnerConfig.default()
 
-  private def runResult(rIO: IO[RunResult[IO]]): IO[(Int, List[String], List[String])] =
-    for {
-      r <- rIO
-      exitCode <- r.exitCode.join
-      errors <- r.stdErr.compile.toList
-      stdOut <- r.stdOut.compile.toList
-    } yield
-      (
-        exitCode,
-        errors,
-        stdOut
-      )
+  private def result(s: Stream[IO, ProgramEvent]): IO[(Int, List[String], List[String])] =
+    s.compile.toList.map(
+      events =>
+        (
+          events
+            .collectFirst({
+              case Exit(code) => code
+            })
+            .get,
+          events.collect({
+            case StdOut(line) if line.nonEmpty => line.trim
+          }),
+          events.collect({
+            case StdErr(line) if line.nonEmpty => line.trim
+          })
+      ))
 
   private def testFile(name: String): File =
     Paths.get(System.getProperty("user.dir"), "test-files", name).toFile
