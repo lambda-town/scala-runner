@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.9"
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / version := "0.1.0"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -10,13 +10,13 @@ ThisBuild / fork := true
 ThisBuild / githubOwner := "lambdacademy-dev"
 ThisBuild / githubTokenSource := Some(Environment("GITHUB_TOKEN"))
 ThisBuild / githubUser := sys.env.getOrElse("GITHUB_USER", "REPLACE_ME")
+ThisBuild / githubRepository := "scala-runner"
 
 ThisBuild / resolvers ++= Seq("program-executor").map(Resolver.githubPackagesRepo("lambdacademy-dev", _))
 
 lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
-    githubRepository := "scala-runner",
     libraryDependencies ++= Seq(
       catsEffect,
       scalaTest % Test,
