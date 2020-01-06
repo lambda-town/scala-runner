@@ -18,7 +18,6 @@ import lambda.runners.scala.{BuildInfo, Dependency, ScalaRunnerConfig}
 import org.apache.commons.io.FileUtils
 
 import scala.reflect.internal.util.BatchSourceFile
-import scala.sys.process._
 import scala.tools.nsc._
 import scala.tools.nsc.reporters.StoreReporter
 
@@ -88,25 +87,18 @@ object Compiler extends StrictLogging {
 
   private def run(
       compiledClassesFolder: File,
-  ): Stream[IO, ProgramEvent] =
-    Stream
-      .eval(IO(s"scala-${Utils.randomId()}"))
-      .flatMap(containerName => {
-        val killContainer = IO {
-          s"docker kill $containerName".!!
-          ()
-        }
-        val cmd = List(
-          "docker",
-          "run",
-          "-v",
-          s"${compiledClassesFolder.getAbsolutePath}:/app/classpath",
-          "--cpus",
-          "1",
-          BuildInfo.docker_imageNames.head,
-        )
-        runProcess(cmd, killContainer)
-      })
+  ) = {
+    val cmd = List(
+      "docker",
+      "run",
+      "-v",
+      s"${compiledClassesFolder.getAbsolutePath}:/app/classpath",
+      "--cpus",
+      "1",
+      BuildInfo.docker_imageNames.head,
+    )
+    Stream.eval(IO(logger.debug("Running Scala process"))) >> runProcess(cmd)
+  }
 
   private def compileRunAndClean(
       sources: List[BatchSourceFile],
