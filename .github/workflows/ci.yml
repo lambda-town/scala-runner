@@ -1,6 +1,9 @@
 name: Scala CI
 
 on: pull_request
+env:
+  GITHUB_USER: CI
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   build:
 
@@ -12,5 +15,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    - name: Run tests
-      run: sbt test
+    - name: Publish docker image and run tests
+      run: sbt publishLocal
