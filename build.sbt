@@ -26,8 +26,15 @@ lazy val root = (project in file("."))
       programExecutor,
     ) ++ Coursier.all ++ Log.all ++ Scala.all,
     dockerfile in docker := {
+      val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
-        from("hseeberger/scala-sbt:8u222_1.3.5_2.12.10")
+        from("azul/zulu-openjdk-alpine:8")
+        workDir("/scala")
+        run("apk" , "add", "--no-cache", "--virtual=.build-dependencies", "wget", "ca-certificates", "bash")
+        run("wget", "--no-verbose", s"https://downloads.lightbend.com/scala/$v/scala-$v.tgz")
+        run("tar", "xzf", s"scala-$v.tgz")
+        run("rm", "-rf", ".build-dependencies")
+        run("rm", s"scala-$v.tgz")
         workDir("/app")
         copy(file("docker"), ".")
         copy(file("utils/src/main/scala"), "./scala-utils")
@@ -36,8 +43,8 @@ lazy val root = (project in file("."))
         entryPoint("./run.sh")
       }
     },
-    imageNames in docker := Seq(
-      ImageName(s"${organization.value}/${name.value}:latest")
+    imageNames in docker := Seq(version.value, "LATEST").map(version =>
+      ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, imageNames in docker),
     buildInfoPackage := "lambda.runners.scala"
