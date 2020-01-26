@@ -19,8 +19,9 @@ package object scala {
   )(implicit config: ScalaRunnerConfig): fs2.Stream[IO, ProgramEvent] = impl.Compiler.runCodeFiles(sourceFiles, dependencies)
 
   /**
-    * Evaluates a scala string, as if it was written in the main of an application
+    * Evaluates a scala string
     * @param code some scala code
+    * @param baseFiles a list of files to compile along the string
     * @param dependencies a list of external dependencies to fetch
     * @return
     */

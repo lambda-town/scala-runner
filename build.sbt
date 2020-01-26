@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.9"
-ThisBuild / version := "0.2.1"
+ThisBuild / version := "0.2.2"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
