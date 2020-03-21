@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.9"
-ThisBuild / version := "0.2.2"
+ThisBuild / version := "0.2.3"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -37,7 +37,6 @@ lazy val root = (project in file("."))
         run("rm", s"scala-$v.tgz")
         workDir("/app")
         copy(file("docker"), ".")
-        copy(file("utils/src/main/scala"), "./scala-utils")
         add((assembly in scalaUtils).value, "./dependencies/utils.jar")
         run("chmod", "+x", "./run.sh")
         entryPoint("./run.sh")

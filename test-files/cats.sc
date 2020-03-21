@@ -1,5 +1,6 @@
-import cats._
+import cats.implicits._
 
 object Main extends App {
-  println("Meow")
+  val Some(meow) = "Meow".some
+  println(meow)
 }

@@ -117,6 +117,15 @@ class ScalaRunnerSpec extends AsyncFunSpec with Matchers {
 
       }
 
+      it("Should be able to use methods from utils") {
+        val file = testFile("with-utils.sc")
+        result(runFiles(List(file))).map({
+          case (exitCode, _, err) =>
+            err shouldBe Nil
+            exitCode shouldBe 0
+        }).unsafeRunSync()
+      }
+
     }
   }
 
