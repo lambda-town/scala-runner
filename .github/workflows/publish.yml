@@ -23,5 +23,5 @@ jobs:
       - name: Publish Docker image
         run: ./.github/scripts/publishDocker.sh
       - name: Publish the packages
-        run: sbt runtime/publish client/publish scala-utils/publish
+        run: sbt runtime/publish client/publish scalaUtils/publish messages/publish
 
