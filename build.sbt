@@ -1,8 +1,8 @@
 import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
-ThisBuild / scalaVersion := "2.12.9"
-ThisBuild / version := "0.2.3"
+ThisBuild / scalaVersion := "2.12.11"
+ThisBuild / version := "0.3.0"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -17,18 +17,54 @@ ThisBuild / resolvers ++= Seq("program-executor").map(Resolver.githubPackagesRep
 lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
+    libraryDependencies += scalaTest % Test
+  )
+  .dependsOn(server, client)
+
+lazy val server = (project in file("server"))
+  .settings(
+    name := "scala-runner-server",
+    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Fs2.all ++ Log.all,
+    dockerfile in docker := {
+      val v = (ThisBuild / scalaVersion).value
+      new Dockerfile {
+        from("azul/zulu-openjdk-alpine:13")
+        expose(2003)
+        workDir("/app")
+        add(assembly.value, "./server.jar")
+        entryPoint("java", "-jar", "./server.jar")
+      }
+    },
+    imageNames in docker := Seq(version.value, "LATEST").map(version =>
+      ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
+    ),
+  ).dependsOn(runtime, messages).enablePlugins(DockerPlugin)
+
+lazy val client = (project in file("client"))
+  .settings(
+    name := "scala-runner-client",
+    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Log.all ++ Fs2.all :+ commonsIO
+  ).dependsOn(messages)
+
+lazy val messages = (project in file("messages"))
+  .settings(
+    name := "scala-runner-messages",
+    libraryDependencies ++= Circe.all :+ programExecutor
+  )
+
+lazy val runtime = (project in file("runtime"))
+  .settings(
+    name := "scala-runner-runtime",
     libraryDependencies ++= Seq(
       catsEffect,
-      scalaTest % Test,
-      nuProcess,
-      fs2,
+      Fs2.core,
       commonsIO,
       programExecutor,
     ) ++ Coursier.all ++ Log.all ++ Scala.all,
     dockerfile in docker := {
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
-        from("azul/zulu-openjdk-alpine:8")
+        from("azul/zulu-openjdk-alpine:13")
         workDir("/scala")
         run("apk" , "add", "--no-cache", "--virtual=.build-dependencies", "wget", "ca-certificates", "bash")
         run("wget", "--no-verbose", s"https://downloads.lightbend.com/scala/$v/scala-$v.tgz")
@@ -48,15 +84,15 @@ lazy val root = (project in file("."))
     buildInfoKeys := Seq[BuildInfoKey](version, imageNames in docker),
     buildInfoPackage := "lambda.runners.scala"
   )
-  .dependsOn(scalaUtils)
+  .dependsOn(scalaUtils, messages)
   .enablePlugins(DockerPlugin, BuildInfoPlugin)
 
 lazy val scalaUtils = (project in file("utils"))
   .settings(
     name := "scala-utils",
     libraryDependencies ++= Seq(
-      pprint,
       scalaTest % Test,
+      pprint
     ),
     assemblyJarName in assembly := "utils.jar"
   )

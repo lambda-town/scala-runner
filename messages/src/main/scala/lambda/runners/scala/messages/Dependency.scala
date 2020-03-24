@@ -1,4 +1,4 @@
-package lambda.runners.scala
+package lambda.runners.scala.messages
 
 case class Dependency(
   organization: String,

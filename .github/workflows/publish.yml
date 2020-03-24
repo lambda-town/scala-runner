@@ -19,10 +19,9 @@ jobs:
         with:
           java-version: 1.8
       - name: Publish image locally and run tests
-        run: sbt docker
+        run: sbt runtime/docker server/docker test
       - name: Publish Docker image
         run: ./.github/scripts/publishDocker.sh
-      - name: Publish scala-runner package
-        run: sbt publish
-      - name: Publish scala-utils package
-        run: sbt scalaUtils/publish
+      - name: Publish the packages
+        run: sbt runtime/publish client/publish scala-utils/publish
+

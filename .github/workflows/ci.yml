@@ -15,5 +15,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-    - name: Publish docker image and run tests
-      run: sbt docker
+    - name: Publish docker image locally and run tests
+      run: sbt runtime/docker server/docker test

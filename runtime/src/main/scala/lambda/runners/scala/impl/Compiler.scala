@@ -14,7 +14,8 @@ import fs2._
 import lambda.programexecutor.ProgramEvent.{Exit, StdErr, StdOut}
 import lambda.programexecutor._
 import lambda.runners.scala.impl.Executor._
-import lambda.runners.scala.{BuildInfo, Dependency, ScalaRunnerConfig}
+import lambda.runners.scala.messages.Dependency
+import lambda.runners.scala.{BuildInfo, ScalaRunnerConfig}
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.TrueFileFilter
 
@@ -24,18 +25,11 @@ import scala.tools.nsc.reporters.StoreReporter
 
 object Compiler extends StrictLogging {
 
-  def runCodeFiles(
-      files: List[File],
-      dependencies: List[Dependency]
+  def run(
+    files: Map[String, String],
+    dependencies: List[Dependency]
   )(implicit config: ScalaRunnerConfig) =
-    compileRunAndClean(files.map(fileToSourceFile), dependencies)
-
-  def runCodeString(
-      code: String,
-      baseFiles: List[File],
-      dependencies: List[Dependency]
-  )(implicit config: ScalaRunnerConfig) =
-    compileRunAndClean(baseFiles.map(fileToSourceFile) :+ stringToSourceFile(code), dependencies)
+    compileRunAndClean(files.map((stringToSourceFile _).tupled).toList, dependencies)
 
   private def compileSources(
       sources: List[BatchSourceFile],
@@ -138,11 +132,7 @@ object Compiler extends StrictLogging {
     dep.version
   )
 
-  private def fileToSourceFile(input: File) = {
-    new BatchSourceFile(input.getName, FileUtils.readFileToByteArray(input).map(_.toChar))
-  }
-
-  private def stringToSourceFile(input: String) =
-    new BatchSourceFile("user-input", input.toCharArray)
+  private def stringToSourceFile(name: String, content: String) =
+    new BatchSourceFile(name, content.toCharArray)
 
 }
