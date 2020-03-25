@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.3.2"
+ThisBuild / version := "0.3.3"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -33,12 +33,7 @@ lazy val server = (project in file("server"))
         expose(2003)
         workDir("/app")
         add(assembly.value, "./server.jar")
-        entryPoint(
-          "java",
-          "-Dconfig.resource=application-prod.conf",
-          "-jar",
-          "./server.jar"
-        )
+        entryPoint("java", "-jar", "./server.jar")
       }
     },
     imageNames in docker := Seq(version.value, "LATEST").map(version =>
