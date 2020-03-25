@@ -14,10 +14,10 @@ import fs2._
 import lambda.programexecutor.ProgramEvent.{Exit, StdErr, StdOut}
 import lambda.programexecutor._
 import lambda.runners.scala.impl.Executor._
+import lambda.runners.scala.impl.Utils.ContainerFile
 import lambda.runners.scala.messages.Dependency
 import lambda.runners.scala.{BuildInfo, ScalaRunnerConfig}
 import org.apache.commons.io.FileUtils
-import org.apache.commons.io.filefilter.TrueFileFilter
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.tools.nsc._
@@ -34,7 +34,7 @@ object Compiler extends StrictLogging {
   private def compileSources(
       sources: List[BatchSourceFile],
       deps: List[File],
-      destFolder: File
+      destFolder: ContainerFile
   ): Stream[IO, ProgramEvent] = {
 
     val reporter = new StoreReporter
@@ -57,7 +57,7 @@ object Compiler extends StrictLogging {
           settings.classpath.append(f.getAbsolutePath())
           settings.bootclasspath.append(f.getAbsolutePath())
         })
-        settings.outdir.value = destFolder.getAbsolutePath
+        settings.outdir.value = destFolder.containerFile.getAbsolutePath
 
         val global = new Global(settings, reporter)
         val run = new global.Run
@@ -77,13 +77,13 @@ object Compiler extends StrictLogging {
     Stream.evalSeq(result)
   }
 
-  private def run(compiledClassesFolder: File) = {
-    println(FileUtils.listFiles(compiledClassesFolder, TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE))
+  private def run(compiledClassesFolder: ContainerFile) = {
+
     val cmd = List(
       "docker",
       "run",
       "-v",
-      s"${compiledClassesFolder.getAbsolutePath}:/app/classpath",
+      s"${compiledClassesFolder.hostFile.getAbsolutePath}:/app/classpath",
       "--cpus",
       "1",
       BuildInfo.docker_imageNames.head
@@ -109,7 +109,7 @@ object Compiler extends StrictLogging {
             .eval(hasErrorsRef.get)
             .flatMap({
               case false =>
-                Stream.eval(IO(deps.foreach(FileUtils.copyFileToDirectory(_, outputFolder)))) >> run(outputFolder)
+                Stream.eval(IO(deps.foreach(FileUtils.copyFileToDirectory(_, outputFolder.containerFile)))) >> run(outputFolder)
               case _ => Stream[IO, ProgramEvent](Exit(1))
             })
       })

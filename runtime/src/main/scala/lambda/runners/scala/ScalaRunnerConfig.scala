@@ -1,18 +1,20 @@
 package lambda.runners.scala
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
+
+import lambda.runners.scala.ScalaRunnerConfig.Volume
+import pureconfig.generic.auto._
 
 /**
 * A configuration object for the Scala Runner
- * @param tmpFilesRootPath this path must be known of Docker on MacOS because it will be mounted inside a container.
  */
 case class ScalaRunnerConfig (
-    tmpFilesRootPath: Path
+    tmpFilesRootPath: Volume
 )
 
 object ScalaRunnerConfig {
-  def default(): ScalaRunnerConfig = {
-    val tmpFolder = Paths.get(System.getProperty("user.dir"), "tmp")
-    ScalaRunnerConfig(tmpFolder)
-  }
+
+  case class Volume(hostPath: Path, containerPath: Path)
+
+  def load(): ScalaRunnerConfig = pureconfig.loadConfigOrThrow[ScalaRunnerConfig]
 }

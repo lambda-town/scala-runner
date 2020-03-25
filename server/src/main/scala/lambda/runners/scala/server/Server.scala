@@ -20,7 +20,7 @@ import scala.util.Random
 
 object Server extends IOApp with StrictLogging {
 
-  implicit val runnerConfig = ScalaRunnerConfig.default()
+  implicit val runnerConfig = ScalaRunnerConfig.load()
   implicit val serverConfig = Config.load()
 
   def run(args: List[String]): IO[ExitCode] = {

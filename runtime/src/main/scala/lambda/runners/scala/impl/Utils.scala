@@ -12,16 +12,20 @@ import scala.util.Random
 
 object Utils extends StrictLogging {
 
-  def getTmpOutputFolder(implicit config: ScalaRunnerConfig): Resource[IO, File] = {
+  case class ContainerFile(hostFile: File, containerFile: File)
+
+  def getTmpOutputFolder(implicit config: ScalaRunnerConfig): Resource[IO, ContainerFile] = {
     val acquire = IO {
-      val newFilePath = new File(config.tmpFilesRootPath.toFile, randomId())
-      logger.debug("Creating a new temp folder {}", newFilePath.getAbsolutePath)
-      FileUtils.forceMkdir(newFilePath)
-      newFilePath
+      val folderName = randomId()
+      val newFolderInContainer = new File(config.tmpFilesRootPath.containerPath.toFile, folderName)
+      val newFolderOnHost = new File(config.tmpFilesRootPath.hostPath.toFile, folderName)
+      logger.debug("Creating a new temp folder {}", newFolderInContainer.getAbsolutePath)
+      FileUtils.forceMkdir(newFolderInContainer)
+      ContainerFile(newFolderOnHost, newFolderInContainer)
     }
-    def release(file: File): IO[Unit] = IO {
-      logger.debug("Deleting folder {}", file.getAbsolutePath)
-      FileUtils.forceDelete(file)
+    def release(folder: ContainerFile): IO[Unit] = IO {
+      logger.debug("Deleting folder {}", folder.containerFile.getAbsolutePath)
+      FileUtils.forceDelete(folder.containerFile)
     }
     Resource.make(acquire)(release)
   }

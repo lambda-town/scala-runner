@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.3.1"
+ThisBuild / version := "0.3.2"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -12,7 +12,7 @@ ThisBuild / githubTokenSource := Some(Environment("GITHUB_TOKEN"))
 ThisBuild / githubUser := sys.env.getOrElse("GITHUB_USER", "REPLACE_ME")
 ThisBuild / githubRepository := "scala-runner"
 
-ThisBuild / resolvers ++= Seq("program-executor").map(Resolver.githubPackagesRepo("lambdacademy-dev", _))
+ThisBuild / resolvers ++= Seq("program-executor", "scala-runer").map(Resolver.githubPackagesRepo("lambdacademy-dev", _))
 
 lazy val root = (project in file("."))
   .settings(
@@ -29,10 +29,16 @@ lazy val server = (project in file("server"))
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
         from("azul/zulu-openjdk-alpine:13")
+        run("apk", "add", "--update", "docker-cli")
         expose(2003)
         workDir("/app")
         add(assembly.value, "./server.jar")
-        entryPoint("java", "-jar", "./server.jar")
+        entryPoint(
+          "java",
+          "-Dconfig.resource=application-prod.conf",
+          "-jar",
+          "./server.jar"
+        )
       }
     },
     imageNames in docker := Seq(version.value, "LATEST").map(version =>
@@ -60,7 +66,7 @@ lazy val runtime = (project in file("runtime"))
       Fs2.core,
       commonsIO,
       programExecutor,
-    ) ++ Coursier.all ++ Log.all ++ Scala.all,
+    ) ++ Coursier.all ++ Log.all ++ Scala.all ++ PureConfig.all,
     dockerfile in docker := {
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
