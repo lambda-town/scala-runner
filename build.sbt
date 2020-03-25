@@ -2,7 +2,7 @@ import Dependencies._
 import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.3.3"
+ThisBuild / version := "0.3.4"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -29,7 +29,7 @@ lazy val server = (project in file("server"))
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
         from("azul/zulu-openjdk-alpine:13")
-        run("apk", "add", "--update", "docker-cli")
+        run("apk" , "add", "docker-cli")
         expose(2003)
         workDir("/app")
         add(assembly.value, "./server.jar")
