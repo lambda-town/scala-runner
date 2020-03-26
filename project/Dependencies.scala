@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.1.1"
   val catsEffect = "org.typelevel" %% "cats-effect" % "2.0.0"
   val commonsIO = "commons-io" % "commons-io" % "2.5"
   val programExecutor = "lambda" % "program-executor_2.12" % "0.3.3"
