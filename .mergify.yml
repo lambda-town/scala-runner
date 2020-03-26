@@ -1,0 +1,9 @@
+pull_request_rules:
+  - name: Automatic merge on approval
+    conditions:
+      - "author=gbogard"
+      - "title~=Update .* to .*"
+      - "status-success~=build"
+    actions:
+      merge:
+        method: merge
