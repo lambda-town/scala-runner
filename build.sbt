@@ -8,16 +8,14 @@ ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
 
 ThisBuild / githubOwner := "lambdacademy-dev"
-ThisBuild / githubTokenSource := Some(Environment("GITHUB_TOKEN"))
-ThisBuild / githubUser := sys.env.getOrElse("GITHUB_USER", "REPLACE_ME")
+ThisBuild / resolvers += Resolver.githubPackages("lambdacademy-dev")
 ThisBuild / githubRepository := "scala-runner"
-
-ThisBuild / resolvers ++= Seq("program-executor", "scala-runer").map(Resolver.githubPackagesRepo("lambdacademy-dev", _))
 
 lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
-    libraryDependencies += scalaTest % Test
+    libraryDependencies += scalaTest % Test,
+    githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
   .dependsOn(server, client)
 
@@ -25,6 +23,7 @@ lazy val server = (project in file("server"))
   .settings(
     name := "scala-runner-server",
     libraryDependencies ++= PureConfig.all ++ Circe.all ++ Fs2.all ++ Log.all,
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN"),
     dockerfile in docker := {
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
@@ -44,13 +43,15 @@ lazy val server = (project in file("server"))
 lazy val client = (project in file("client"))
   .settings(
     name := "scala-runner-client",
-    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Log.all ++ Fs2.all :+ commonsIO
+    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Log.all ++ Fs2.all :+ commonsIO,
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   ).dependsOn(messages)
 
 lazy val messages = (project in file("messages"))
   .settings(
     name := "scala-runner-messages",
-    libraryDependencies ++= Circe.all :+ programExecutor
+    libraryDependencies ++= Circe.all :+ programExecutor,
+    githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
 
 lazy val runtime = (project in file("runtime"))
@@ -83,7 +84,8 @@ lazy val runtime = (project in file("runtime"))
       ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
     ),
     buildInfoKeys := Seq[BuildInfoKey](version, imageNames in docker),
-    buildInfoPackage := "lambda.runners.scala"
+    buildInfoPackage := "lambda.runners.scala",
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
   .dependsOn(scalaUtils, messages)
   .enablePlugins(DockerPlugin, BuildInfoPlugin)
@@ -95,6 +97,7 @@ lazy val scalaUtils = (project in file("utils"))
       scalaTest % Test,
       pprint
     ),
-    assemblyJarName in assembly := "utils.jar"
+    assemblyJarName in assembly := "utils.jar",
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
 
