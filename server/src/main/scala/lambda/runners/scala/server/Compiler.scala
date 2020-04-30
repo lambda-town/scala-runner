@@ -22,7 +22,6 @@ class Compiler(implicit config: Config, cs: ContextShift[IO]) {
       val settings = new Settings()
 
       settings.classpath.append(baseClassPath.cp)
-      // settings.bootclasspath.append(baseClassPath.cp)
       settings.usejavacp.value = true
       settings.outdir.value = outputFolder.getAbsolutePath
 

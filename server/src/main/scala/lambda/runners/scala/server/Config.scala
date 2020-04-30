@@ -6,6 +6,7 @@ case class Config(host: String,
                   port: Int,
                   tmpFolder: String,
                   utilsClassPath: String,
+                  javaCommand: String,
                   maxNumberRunningProcesses: Long)
 
 object Config {

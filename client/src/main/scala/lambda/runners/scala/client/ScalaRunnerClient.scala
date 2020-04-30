@@ -52,7 +52,7 @@ class ScalaRunnerClient(
   private def connect(attempt: Int = 1): Stream[IO, Socket[IO]] =
     Stream
       .resource(socketGroup.client[IO](addr))
-      .evalTap(_ => IO(println(s"Connected to Scala Runner Server running at $addr")))
+      .evalTap(_ => IO(logger.info(s"Connected to Scala Runner Server running at $addr")))
       .handleErrorWith {
         case e: ConnectException =>
           if (attempt < 5) connect(attempt + 1).delayBy(5.seconds * attempt.toLong)

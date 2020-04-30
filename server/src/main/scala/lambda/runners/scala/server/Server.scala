@@ -1,5 +1,6 @@
 package lambda.runners.scala.server
 
+import java.io.File
 import java.net.InetSocketAddress
 
 import cats.implicits._
@@ -23,18 +24,19 @@ object Server extends IOApp with StrictLogging {
   val compiler = new Compiler()
 
   def run(args: List[String]): IO[ExitCode] =
-    Blocker[IO].use { blocker =>
+    (Blocker[IO], Runner.securityPolicyFile).tupled.use {
+      case (blocker, secPolicy) =>
       for {
         _ <- IO(logger.info("Downloading common dependencies"))
         _ <- compiler.fetchCommonDependencies()
         _ <- IO(logger.info("Downloaded common dependencies", serverConfig.host, serverConfig.port))
         permits <- Semaphore[IO](serverConfig.maxNumberRunningProcesses)
         _ <- IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port))
-        _ <- SocketGroup[IO](blocker).use(server(_, permits))
+        _ <- SocketGroup[IO](blocker).use(server(_, permits, secPolicy))
       } yield ExitCode.Success
     }
 
-  private def server(socketGroup: SocketGroup, permits: Semaphore[IO]) = {
+  private def server(socketGroup: SocketGroup, permits: Semaphore[IO], secPolicy: File) = {
     (socketGroup.server[IO](new InetSocketAddress(serverConfig.host, serverConfig.port)) map { socketResource =>
       Stream
         .resource(socketResource)
@@ -44,7 +46,7 @@ object Server extends IOApp with StrictLogging {
             socket
               .reads(16000)
               .through(byteStreamParser)
-              .through(run(Random.alphanumeric.take(15).mkString))
+              .through(run(Random.alphanumeric.take(15).mkString, secPolicy))
               .map(_.asJson.noSpaces)
               .interleave(Stream.constant("\n"))
               .through(text.utf8Encode)
@@ -56,7 +58,7 @@ object Server extends IOApp with StrictLogging {
     }).parJoinUnbounded.compile.drain
   }
 
-  private def run(id: String): Pipe[IO, Json, ProgramEvent] =
+  private def run(id: String, secPolicy: File): Pipe[IO, Json, ProgramEvent] =
     _.evalTap(json => IO(logger.trace("Received JSON {} (id: {})", json, id)))
       .through(decoder[IO, Input])
       .evalTap(input => IO(logger.debug("Received Input {} (id: {})", input, id)))
@@ -81,7 +83,7 @@ object Server extends IOApp with StrictLogging {
             Stream(
             errors.map(ProgramEvent.StdErr):_*
           ) ++ Stream(ProgramEvent.Exit(1))
-          case Right(cp) => Runner.run(cp)
+          case Right(cp) => Runner.run(cp, secPolicy)
         })
       })
       .evalTap(evt => IO(logger.trace("Emitting event {} (id: {})", evt, id)))

@@ -1,7 +1,7 @@
 import Dependencies._
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.3.4"
+ThisBuild / version := "0.4.0"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true
@@ -30,12 +30,13 @@ lazy val server = (project in file("server"))
       val v = (ThisBuild / scalaVersion).value
       new Dockerfile {
         from("azul/zulu-openjdk-alpine:13")
-        run("apk" , "add", "docker-cli")
         expose(2003)
         workDir("/app")
+        // Create Class Data Archive
+        run("java", "-Xshare:dump")
         add((assembly in scalaUtils).value, "./dependencies/utils.jar")
         add(assembly.value, "./server.jar")
-        entryPoint("java", "-jar", "./server.jar")
+        entryPoint("java", "-Dconfig.resource=application-prod.conf", "-jar", "./server.jar")
       }
     },
     imageNames in docker := Seq(version.value, "LATEST").map(version =>
