@@ -16,4 +16,4 @@ jobs:
       with:
         java-version: 1.8
     - name: Publish docker image locally and run tests
-      run: server/docker test
+      run: java -Xshare:dump && sbt server/docker test
