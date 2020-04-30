@@ -1,5 +1,4 @@
 import Dependencies._
-import sbtghpackages.TokenSource.Environment
 
 ThisBuild / scalaVersion := "2.12.11"
 ThisBuild / version := "0.3.4"
@@ -17,12 +16,15 @@ lazy val root = (project in file("."))
     libraryDependencies += scalaTest % Test,
     githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
-  .dependsOn(server, client)
+  .dependsOn(server, client, scalaUtils)
 
 lazy val server = (project in file("server"))
   .settings(
     name := "scala-runner-server",
-    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Fs2.all ++ Log.all,
+    libraryDependencies ++= PureConfig.all ++ Circe.all ++ Fs2.all ++ Log.all ++ Coursier.all ++ Scala.all ++ Seq(
+      programExecutor,
+      commonsIO
+    ),
     githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN"),
     dockerfile in docker := {
       val v = (ThisBuild / scalaVersion).value
@@ -31,6 +33,7 @@ lazy val server = (project in file("server"))
         run("apk" , "add", "docker-cli")
         expose(2003)
         workDir("/app")
+        add((assembly in scalaUtils).value, "./dependencies/utils.jar")
         add(assembly.value, "./server.jar")
         entryPoint("java", "-jar", "./server.jar")
       }
@@ -38,7 +41,7 @@ lazy val server = (project in file("server"))
     imageNames in docker := Seq(version.value, "LATEST").map(version =>
       ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
     ),
-  ).dependsOn(runtime, messages).enablePlugins(DockerPlugin)
+  ).dependsOn(messages).enablePlugins(DockerPlugin)
 
 lazy val client = (project in file("client"))
   .settings(
@@ -53,42 +56,6 @@ lazy val messages = (project in file("messages"))
     libraryDependencies ++= Circe.all :+ programExecutor,
     githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
-
-lazy val runtime = (project in file("runtime"))
-  .settings(
-    name := "scala-runner-runtime",
-    libraryDependencies ++= Seq(
-      catsEffect,
-      Fs2.core,
-      commonsIO,
-      programExecutor,
-    ) ++ Coursier.all ++ Log.all ++ Scala.all ++ PureConfig.all,
-    dockerfile in docker := {
-      val v = (ThisBuild / scalaVersion).value
-      new Dockerfile {
-        from("azul/zulu-openjdk-alpine:13")
-        workDir("/scala")
-        run("apk" , "add", "--no-cache", "--virtual=.build-dependencies", "wget", "ca-certificates", "bash")
-        run("wget", "--no-verbose", s"https://downloads.lightbend.com/scala/$v/scala-$v.tgz")
-        run("tar", "xzf", s"scala-$v.tgz")
-        run("rm", "-rf", ".build-dependencies")
-        run("rm", s"scala-$v.tgz")
-        workDir("/app")
-        copy(file("docker"), ".")
-        add((assembly in scalaUtils).value, "./dependencies/utils.jar")
-        run("chmod", "+x", "./run.sh")
-        entryPoint("./run.sh")
-      }
-    },
-    imageNames in docker := Seq(version.value, "LATEST").map(version =>
-      ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
-    ),
-    buildInfoKeys := Seq[BuildInfoKey](version, imageNames in docker),
-    buildInfoPackage := "lambda.runners.scala",
-    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
-  )
-  .dependsOn(scalaUtils, messages)
-  .enablePlugins(DockerPlugin, BuildInfoPlugin)
 
 lazy val scalaUtils = (project in file("utils"))
   .settings(

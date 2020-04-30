@@ -13,22 +13,26 @@ import io.circe.syntax._
 import fs2._
 import fs2.io.tcp.SocketGroup
 import lambda.programexecutor.ProgramEvent
-import lambda.runners.scala.ScalaRunnerConfig
 import lambda.runners.scala.messages.Input
 
 import scala.util.Random
 
 object Server extends IOApp with StrictLogging {
 
-  implicit val runnerConfig = ScalaRunnerConfig.load()
   implicit val serverConfig = Config.load()
+  val compiler = new Compiler()
 
-  def run(args: List[String]): IO[ExitCode] = {
+  def run(args: List[String]): IO[ExitCode] =
     Blocker[IO].use { blocker =>
-      IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port)) >>
-        Semaphore[IO](serverConfig.maxNumberRunningProcesses).flatMap(permits => SocketGroup[IO](blocker).use(server(_, permits)))
-    } as ExitCode.Success
-  }
+      for {
+        _ <- IO(logger.info("Downloading common dependencies"))
+        _ <- compiler.fetchCommonDependencies()
+        _ <- IO(logger.info("Downloaded common dependencies", serverConfig.host, serverConfig.port))
+        permits <- Semaphore[IO](serverConfig.maxNumberRunningProcesses)
+        _ <- IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port))
+        _ <- SocketGroup[IO](blocker).use(server(_, permits))
+      } yield ExitCode.Success
+    }
 
   private def server(socketGroup: SocketGroup, permits: Semaphore[IO]) = {
     (socketGroup.server[IO](new InetSocketAddress(serverConfig.host, serverConfig.port)) map { socketResource =>
@@ -72,7 +76,13 @@ object Server extends IOApp with StrictLogging {
           })
           .flatten
 
-        lambda.runners.scala.runCode(files, deps)
+        Stream.resource(compiler.compile(files, deps)).flatMap({
+          case Left(errors) =>
+            Stream(
+            errors.map(ProgramEvent.StdErr):_*
+          ) ++ Stream(ProgramEvent.Exit(1))
+          case Right(cp) => Runner.run(cp)
+        })
       })
       .evalTap(evt => IO(logger.trace("Emitting event {} (id: {})", evt, id)))
       .handleErrorWith(
