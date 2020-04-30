@@ -1,5 +1,6 @@
 package lambda.runners.scala.server
 
+import java.io.File
 import java.net.InetSocketAddress
 
 import cats.implicits._
@@ -13,24 +14,29 @@ import io.circe.syntax._
 import fs2._
 import fs2.io.tcp.SocketGroup
 import lambda.programexecutor.ProgramEvent
-import lambda.runners.scala.ScalaRunnerConfig
 import lambda.runners.scala.messages.Input
 
 import scala.util.Random
 
 object Server extends IOApp with StrictLogging {
 
-  implicit val runnerConfig = ScalaRunnerConfig.load()
   implicit val serverConfig = Config.load()
+  val compiler = new Compiler()
 
-  def run(args: List[String]): IO[ExitCode] = {
-    Blocker[IO].use { blocker =>
-      IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port)) >>
-        Semaphore[IO](serverConfig.maxNumberRunningProcesses).flatMap(permits => SocketGroup[IO](blocker).use(server(_, permits)))
-    } as ExitCode.Success
-  }
+  def run(args: List[String]): IO[ExitCode] =
+    (Blocker[IO], Runner.securityPolicyFile).tupled.use {
+      case (blocker, secPolicy) =>
+      for {
+        _ <- IO(logger.info("Downloading common dependencies"))
+        _ <- compiler.fetchCommonDependencies()
+        _ <- IO(logger.info("Downloaded common dependencies", serverConfig.host, serverConfig.port))
+        permits <- Semaphore[IO](serverConfig.maxNumberRunningProcesses)
+        _ <- IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port))
+        _ <- SocketGroup[IO](blocker).use(server(_, permits, secPolicy))
+      } yield ExitCode.Success
+    }
 
-  private def server(socketGroup: SocketGroup, permits: Semaphore[IO]) = {
+  private def server(socketGroup: SocketGroup, permits: Semaphore[IO], secPolicy: File) = {
     (socketGroup.server[IO](new InetSocketAddress(serverConfig.host, serverConfig.port)) map { socketResource =>
       Stream
         .resource(socketResource)
@@ -40,7 +46,7 @@ object Server extends IOApp with StrictLogging {
             socket
               .reads(16000)
               .through(byteStreamParser)
-              .through(run(Random.alphanumeric.take(15).mkString))
+              .through(run(Random.alphanumeric.take(15).mkString, secPolicy))
               .map(_.asJson.noSpaces)
               .interleave(Stream.constant("\n"))
               .through(text.utf8Encode)
@@ -52,7 +58,7 @@ object Server extends IOApp with StrictLogging {
     }).parJoinUnbounded.compile.drain
   }
 
-  private def run(id: String): Pipe[IO, Json, ProgramEvent] =
+  private def run(id: String, secPolicy: File): Pipe[IO, Json, ProgramEvent] =
     _.evalTap(json => IO(logger.trace("Received JSON {} (id: {})", json, id)))
       .through(decoder[IO, Input])
       .evalTap(input => IO(logger.debug("Received Input {} (id: {})", input, id)))
@@ -72,7 +78,13 @@ object Server extends IOApp with StrictLogging {
           })
           .flatten
 
-        lambda.runners.scala.runCode(files, deps)
+        Stream.resource(compiler.compile(files, deps)).flatMap({
+          case Left(errors) =>
+            Stream(
+            errors.map(ProgramEvent.StdErr):_*
+          ) ++ Stream(ProgramEvent.Exit(1))
+          case Right(cp) => Runner.run(cp, secPolicy)
+        })
       })
       .evalTap(evt => IO(logger.trace("Emitting event {} (id: {})", evt, id)))
       .handleErrorWith(

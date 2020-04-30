@@ -8,9 +8,8 @@ import com.typesafe.scalalogging.StrictLogging
 import fs2.Stream
 import lambda.programexecutor.ProgramEvent
 import lambda.programexecutor.ProgramEvent.{Exit, StdErr, StdOut}
-import lambda.runners.scala.impl.Utils
 import lambda.runners.scala.messages.Dependency
-import lambda.runners.scala.server.{Config, Server}
+import lambda.runners.scala.server.{Config, Server, Utils}
 import org.scalatest._
 
 import scala.concurrent.ExecutionContext
