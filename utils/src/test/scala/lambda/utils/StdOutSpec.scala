@@ -1,8 +1,9 @@
 package lambda.utils
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class StdOutSpec extends FunSpec with Matchers {
+class StdOutSpec extends AnyFunSpec with Matchers {
   describe("StdOut utils") {
     it("Should capture the standard output as as string along with the expression value") {
       val expectedValue = 1 :: 2 :: 3 :: Nil

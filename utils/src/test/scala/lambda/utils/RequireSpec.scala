@@ -1,8 +1,10 @@
 package lambda.utils
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
+import org.scalatest.matchers.should.Matchers
 
-class RequireSpec extends FunSpec with Matchers {
+
+class RequireSpec extends AnyFunSpec with Matchers {
   describe("Requirements Utils") {
     it("Should not throw when the assertion is met") {
       Require.require(true, "")

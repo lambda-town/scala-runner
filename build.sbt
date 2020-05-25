@@ -1,7 +1,7 @@
 import Dependencies._
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.4.0"
+ThisBuild / version := "0.4.1"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambdacademy"
 ThisBuild / fork := true

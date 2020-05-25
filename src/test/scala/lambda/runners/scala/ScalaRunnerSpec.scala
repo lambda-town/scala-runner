@@ -10,7 +10,9 @@ import lambda.programexecutor.ProgramEvent
 import lambda.programexecutor.ProgramEvent.{Exit, StdErr, StdOut}
 import lambda.runners.scala.messages.Dependency
 import lambda.runners.scala.server.{Config, Server, Utils}
-import org.scalatest._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funspec.AsyncFunSpec
+import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.ExecutionContext
 
