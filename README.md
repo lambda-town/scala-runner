@@ -26,5 +26,5 @@ the current working directory.
 ## Starting the docker container
 
 ```
-docker run -p 2003:2003 -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/tmp:/app/tmp" -e "TMP_ROOT_HOST_PATH=$PWD/tmp" -e TMP_ROOT_CONTAINER_PATH=/app/tmp  docker.pkg.github.com/lambdacademy-dev/scala-runner/scala-runner-server:LATEST
+docker run -p 2003:2003 -e TMP_ROOT_PATH=/app/tmp docker.pkg.github.com/lambda-town/scala-runner/scala-runner-server:LATEST
 ```

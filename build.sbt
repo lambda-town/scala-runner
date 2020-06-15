@@ -3,11 +3,11 @@ import Dependencies._
 ThisBuild / scalaVersion := "2.12.11"
 ThisBuild / version := "0.4.1"
 ThisBuild / organization := "lambda"
-ThisBuild / organizationName := "Lambdacademy"
+ThisBuild / organizationName := "Lambda Town"
 ThisBuild / fork := true
 
-ThisBuild / githubOwner := "lambdacademy-dev"
-ThisBuild / resolvers += Resolver.githubPackages("lambdacademy-dev")
+ThisBuild / githubOwner := "lambda-town"
+ThisBuild / resolvers += Resolver.githubPackages("lambda-town")
 ThisBuild / githubRepository := "scala-runner"
 
 lazy val root = (project in file("."))
