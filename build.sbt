@@ -1,7 +1,7 @@
 import Dependencies._
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.4.1"
+ThisBuild / version := "0.4.2"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambda Town"
 ThisBuild / fork := true
@@ -14,7 +14,7 @@ lazy val root = (project in file("."))
   .settings(
     name := "scala-runner",
     libraryDependencies += scalaTest % Test,
-    githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
   .dependsOn(server, client, scalaUtils)
 
@@ -36,7 +36,14 @@ lazy val server = (project in file("server"))
         run("java", "-Xshare:dump")
         add((assembly in scalaUtils).value, "./dependencies/utils.jar")
         add(assembly.value, "./server.jar")
-        entryPoint("java", "-Dconfig.resource=application-prod.conf", "-jar", "./server.jar")
+        entryPoint(
+          "java",
+          "-Dconfig.resource=application-prod.conf",
+          "-Xms32m",
+          "-Xmx32m",
+          "-jar",
+          "./server.jar"
+        )
       }
     },
     imageNames in docker := Seq(version.value, "LATEST").map(version =>
@@ -55,7 +62,7 @@ lazy val messages = (project in file("messages"))
   .settings(
     name := "scala-runner-messages",
     libraryDependencies ++= Circe.all :+ programExecutor,
-    githubTokenSource :=  TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
+    githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource.Environment("GITHUB_TOKEN")
   )
 
 lazy val scalaUtils = (project in file("utils"))

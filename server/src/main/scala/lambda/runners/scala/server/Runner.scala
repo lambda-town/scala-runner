@@ -19,7 +19,8 @@ object Runner extends {
   )(implicit config: Config): Stream[IO, ProgramEvent] = {
     val args = config.javaCommand.split(" ").toList ++ List(
       s"-Djava.security.policy==${securityPolicyFile.getAbsolutePath}",
-      "-Xmx64m",
+      "-Xms32m",
+      "-Xmx32m",
       "-Xshare:on",
       "-client",
       "-cp",

@@ -26,27 +26,26 @@ object Server extends IOApp with StrictLogging {
   def run(args: List[String]): IO[ExitCode] =
     (Blocker[IO], Runner.securityPolicyFile).tupled.use {
       case (blocker, secPolicy) =>
-      for {
-        _ <- IO(logger.info("Downloading common dependencies"))
-        _ <- compiler.fetchCommonDependencies()
-        _ <- IO(logger.info("Downloaded common dependencies", serverConfig.host, serverConfig.port))
-        permits <- Semaphore[IO](serverConfig.maxNumberRunningProcesses)
-        _ <- IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port))
-        _ <- SocketGroup[IO](blocker).use(server(_, permits, secPolicy))
-      } yield ExitCode.Success
+        for {
+          _ <- IO(logger.info("Downloading common dependencies"))
+          _ <- compiler.fetchCommonDependencies()
+          _ <- IO(logger.info("Downloaded common dependencies", serverConfig.host, serverConfig.port))
+          permits <- Semaphore[IO](serverConfig.maxNumberRunningProcesses)
+          _ <- IO(logger.info("Scala Runner Server is running on {}:{}", serverConfig.host, serverConfig.port))
+          _ <- SocketGroup[IO](blocker).use(server(_, permits, secPolicy))
+        } yield ExitCode.Success
     }
 
   private def server(socketGroup: SocketGroup, permits: Semaphore[IO], secPolicy: File) = {
     (socketGroup.server[IO](new InetSocketAddress(serverConfig.host, serverConfig.port)) map { socketResource =>
       Stream
         .resource(socketResource)
-        .evalMap(socket => permits.acquire.as(socket))
         .flatMap(
           socket =>
             socket
               .reads(16000)
               .through(byteStreamParser)
-              .through(run(Random.alphanumeric.take(15).mkString, secPolicy))
+              .through(run(Random.alphanumeric.take(15).mkString, secPolicy, permits))
               .map(_.asJson.noSpaces)
               .interleave(Stream.constant("\n"))
               .through(text.utf8Encode)
@@ -54,11 +53,10 @@ object Server extends IOApp with StrictLogging {
               .append(Stream.eval(socket.endOfOutput))
               .handleError(e => logger.error("Something went wrong on the server", e))
         )
-        .evalTap(_ => permits.release)
     }).parJoinUnbounded.compile.drain
   }
 
-  private def run(id: String, secPolicy: File): Pipe[IO, Json, ProgramEvent] =
+  private def run(id: String, secPolicy: File, permits: Semaphore[IO]): Pipe[IO, Json, ProgramEvent] =
     _.evalTap(json => IO(logger.trace("Received JSON {} (id: {})", json, id)))
       .through(decoder[IO, Input])
       .evalTap(input => IO(logger.debug("Received Input {} (id: {})", input, id)))
@@ -78,20 +76,24 @@ object Server extends IOApp with StrictLogging {
           })
           .flatten
 
-        Stream.resource(compiler.compile(files, deps)).flatMap({
+        val stream = Stream.resource(compiler.compile(files, deps)).flatMap({
           case Left(errors) =>
             Stream(
-            errors.map(ProgramEvent.StdErr):_*
-          ) ++ Stream(ProgramEvent.Exit(1))
+              errors.map(ProgramEvent.StdErr): _*
+            ) ++ Stream(ProgramEvent.Exit(1))
           case Right(cp) => Runner.run(cp, secPolicy)
         })
+
+          .evalTap(evt => IO(logger.trace("Emitting event {} (id: {})", evt, id)))
+          .handleErrorWith(
+            e =>
+              Stream.eval(IO {
+                logger.warn("Something went wrong while running the code", e)
+                ProgramEvent.Exit(1)
+              })
+          )
+
+        Stream.eval(permits.acquire).drain ++ stream ++ Stream.eval(permits.release).drain
       })
-      .evalTap(evt => IO(logger.trace("Emitting event {} (id: {})", evt, id)))
-      .handleErrorWith(
-        e =>
-          Stream.eval(IO {
-            logger.warn("Something went wrong while running the code", e)
-            ProgramEvent.Exit(1)
-          })
-      )
+
 }
