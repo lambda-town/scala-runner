@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 
-docker login -u $GITHUB_USER -p $GITHUB_TOKEN docker.pkg.github.com
+docker login rg.fr-par.scw.cloud/lambda -u nologin -p "$SCW_SECRET_TOKEN"
 sbt server/dockerBuildAndPush

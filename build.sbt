@@ -1,7 +1,7 @@
 import Dependencies._
 
 ThisBuild / scalaVersion := "2.12.11"
-ThisBuild / version := "0.4.2"
+ThisBuild / version := "0.5.0"
 ThisBuild / organization := "lambda"
 ThisBuild / organizationName := "Lambda Town"
 ThisBuild / fork := true
@@ -39,15 +39,16 @@ lazy val server = (project in file("server"))
         entryPoint(
           "java",
           "-Dconfig.resource=application-prod.conf",
-          "-Xms32m",
-          "-Xmx32m",
+          "-Xms92m",
+          "-Xmx92m",
+          "-XX:+CrashOnOutOfMemoryError",
           "-jar",
           "./server.jar"
         )
       }
     },
-    imageNames in docker := Seq(version.value, "LATEST").map(version =>
-      ImageName(s"docker.pkg.github.com/${githubOwner.value}/${githubRepository.value}/${name.value}:$version")
+    imageNames in docker := Seq(version.value, "latest").map(version =>
+      ImageName(s"rg.fr-par.scw.cloud/lambda/${name.value}:$version")
     ),
   ).dependsOn(messages).enablePlugins(DockerPlugin)
 

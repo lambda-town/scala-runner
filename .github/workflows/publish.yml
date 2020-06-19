@@ -7,6 +7,7 @@ on:
 env:
   GITHUB_USER: CI
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  SCW_SECRET_TOKEN: ${{ secrets.SCW_SECRET_TOKEN }}
 jobs:
   build:
 
